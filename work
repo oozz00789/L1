@@ -1,0 +1,74 @@
+
+import cv2
+import time
+
+
+recognizer = cv2.face.LBPHFaceRecognizer_create()
+
+
+recognizer.read('face.yml')
+
+
+cascade_path = "haarcascade_frontalface_default.xml"
+face_cascade = cv2.CascadeClassifier(cascade_path)
+
+
+cap = cv2.VideoCapture(0)
+
+
+if not cap.isOpened():
+    print("Cannot open camera")
+    exit()
+
+last_record_time = 0  
+
+record_interval = 3  
+
+min_face_size_threshold = 1000  
+
+
+name = {
+    '1': 'lin',
+    '2': 'Ju',
+    '3': 'Lee'
+}
+
+
+while True:
+
+    ret, img = cap.read()
+    
+
+    if not ret:
+        print("Cannot receive frame")
+        break
+
+    img = cv2.resize(img, (600, 400))
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.5)
+
+    for (x, y, w, h) in faces:
+
+        if w * h > min_face_size_threshold:
+            cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            idnum, confidence = recognizer.predict(gray[y:y + h, x:x + w])
+            if confidence < 70:
+                text = name[str(idnum)]
+            else:
+                text = '???'
+                current_time = time.time()
+                if current_time - last_record_time > record_interval:
+                    cv2.imwrite(f'unknown_face_{current_time}.png', img)
+                    last_record_time = current_time
+
+            cv2.putText(img, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+
+
+    cv2.imshow('oxxostudio', img)
+    
+    if cv2.waitKey(5) == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
